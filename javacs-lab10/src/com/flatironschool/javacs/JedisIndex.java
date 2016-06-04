@@ -8,7 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-
+import java.util.Iterator;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import redis.clients.jedis.Jedis;
@@ -67,8 +68,9 @@ public class JedisIndex {
 	 * @return Set of URLs.
 	 */
 	public Set<String> getURLs(String term) {
-        // FILL THIS IN!
-		return null;
+        // filled in
+		 Set<String> set=jedis.smembers(urlSetKey(term));
+		return set;
 	}
 
     /**
@@ -78,8 +80,15 @@ public class JedisIndex {
 	 * @return Map from URL to count.
 	 */
 	public Map<String, Integer> getCounts(String term) {
-        // FILL THIS IN!
-		return null;
+        // filled in
+		Map<String, Integer> counts= new HashMap<String, Integer>();
+		Set<String> set=getURLs(term);
+		Iterator<String> it =set.iterator();
+		while(it.hasNext()){
+			String url=it.next();
+			counts.put(url, getCount(url, term));
+		} 
+		return counts;
 	}
 
     /**
@@ -90,8 +99,8 @@ public class JedisIndex {
 	 * @return
 	 */
 	public Integer getCount(String url, String term) {
-        // FILL THIS IN!
-		return null;
+        // filled in
+		return Integer.parseInt(jedis.hget(termCounterKey(url),term));
 	}
 
 
@@ -102,7 +111,19 @@ public class JedisIndex {
 	 * @param paragraphs  Collection of elements that should be indexed.
 	 */
 	public void indexPage(String url, Elements paragraphs) {
-        // FILL THIS IN!
+        // filled in
+		TermCounter tc = new TermCounter(url);
+		tc.processElements(paragraphs);
+		for (String term: tc.keySet()) {
+			add(term, tc);
+			int count = tc.get(term);
+			jedis.hset(termCounterKey(url),term,Integer.toString(count));
+		}
+	}
+	public void add(String term, TermCounter tc) {
+		String url=tc.getLabel();
+		jedis.sadd(urlSetKey(term),url);
+
 	}
 
 	/**
